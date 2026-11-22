@@ -5,7 +5,6 @@ import { ImportResult, Parametres } from '../../core/models';
 
 @Component({
   selector: 'app-parametres',
-  standalone: true,
   imports: [FormsModule],
   template: `
     <h1>Paramètres</h1>

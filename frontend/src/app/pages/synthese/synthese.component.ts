@@ -1,4 +1,4 @@
-import { AfterViewChecked, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, afterRenderEffect, inject, signal, viewChild } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
@@ -9,20 +9,30 @@ Chart.register(...registerables);
 
 @Component({
   selector: 'app-synthese',
-  standalone: true,
   imports: [CurrencyPipe, DatePipe, DecimalPipe, NgClass, RouterLink],
   templateUrl: './synthese.component.html',
 })
-export class SyntheseComponent implements OnInit, AfterViewChecked, OnDestroy {
+export class SyntheseComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
 
   synthese = signal<Synthese | null>(null);
   erreur = signal<string | null>(null);
 
-  @ViewChild('chartKm') chartKmRef?: ElementRef<HTMLCanvasElement>;
-  @ViewChild('chartCout') chartCoutRef?: ElementRef<HTMLCanvasElement>;
+  private chartKm = viewChild<ElementRef<HTMLCanvasElement>>('chartKm');
+  private chartCout = viewChild<ElementRef<HTMLCanvasElement>>('chartCout');
   private charts: Chart[] = [];
-  private chartsDessines = false;
+
+  constructor() {
+    // Dessine les graphiques une fois les données reçues et les canvas présents dans le DOM
+    afterRenderEffect(() => {
+      const s = this.synthese();
+      const km = this.chartKm()?.nativeElement;
+      const cout = this.chartCout()?.nativeElement;
+      if (s && km && cout && this.charts.length === 0) {
+        this.dessiner(s, km, cout);
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.api.synthese().subscribe({
@@ -31,19 +41,11 @@ export class SyntheseComponent implements OnInit, AfterViewChecked, OnDestroy {
     });
   }
 
-  ngAfterViewChecked(): void {
-    const s = this.synthese();
-    if (!this.chartsDessines && s && this.chartKmRef && this.chartCoutRef) {
-      this.chartsDessines = true;
-      this.dessiner(s);
-    }
-  }
-
   ngOnDestroy(): void {
     this.charts.forEach((c) => c.destroy());
   }
 
-  private dessiner(s: Synthese): void {
+  private dessiner(s: Synthese, canvasKm: HTMLCanvasElement, canvasCout: HTMLCanvasElement): void {
     const style = getComputedStyle(document.documentElement);
     const primary = style.getPropertyValue('--primary').trim();
     const accent = style.getPropertyValue('--accent').trim();
@@ -57,7 +59,7 @@ export class SyntheseComponent implements OnInit, AfterViewChecked, OnDestroy {
     );
 
     this.charts.push(
-      new Chart(this.chartKmRef!.nativeElement, {
+      new Chart(canvasKm, {
         type: 'bar',
         data: {
           labels,
@@ -74,12 +76,12 @@ export class SyntheseComponent implements OnInit, AfterViewChecked, OnDestroy {
             },
           ],
         },
-        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+        options: { locale: 'fr-FR', maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
       }),
     );
 
     this.charts.push(
-      new Chart(this.chartCoutRef!.nativeElement, {
+      new Chart(canvasCout, {
         type: 'bar',
         data: {
           labels,
@@ -88,7 +90,7 @@ export class SyntheseComponent implements OnInit, AfterViewChecked, OnDestroy {
             { label: 'Essence simulée (€)', data: s.mois.map((m) => round(m.coutEssence)), backgroundColor: accent, borderRadius: 4 },
           ],
         },
-        options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
+        options: { locale: 'fr-FR', maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
       }),
     );
   }

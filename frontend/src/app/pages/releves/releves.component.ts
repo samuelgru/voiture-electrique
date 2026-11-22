@@ -6,7 +6,6 @@ import { ReleveKm } from '../../core/models';
 
 @Component({
   selector: 'app-releves',
-  standalone: true,
   imports: [FormsModule, DatePipe, DecimalPipe],
   template: `
     <div class="toolbar">

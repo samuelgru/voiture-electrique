@@ -2,7 +2,7 @@ name: zoe
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:19-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: zoe
@@ -10,7 +10,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-zoe}
       TZ: Europe/Paris
     volumes:
-      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+      # PostgreSQL 18+ : monter /var/lib/postgresql (les données vont dans un sous-dossier par version)
+      - ${DATA_DIR:-./data}/pg:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U zoe -d zoe"]
       interval: 10s

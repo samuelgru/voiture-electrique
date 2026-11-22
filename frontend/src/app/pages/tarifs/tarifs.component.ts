@@ -6,7 +6,6 @@ import { Tarif } from '../../core/models';
 
 @Component({
   selector: 'app-tarifs',
-  standalone: true,
   imports: [FormsModule, CurrencyPipe, DatePipe],
   template: `
     <div class="toolbar">

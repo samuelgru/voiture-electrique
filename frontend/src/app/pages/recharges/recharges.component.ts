@@ -17,7 +17,6 @@ interface FormRecharge {
 
 @Component({
   selector: 'app-recharges',
-  standalone: true,
   imports: [FormsModule, CurrencyPipe, DatePipe, DecimalPipe, PercentPipe],
   templateUrl: './recharges.component.html',
 })

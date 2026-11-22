@@ -1,6 +1,8 @@
 # Ma Zoé – suivi de consommation électrique
 
-Remplace le classeur `electricite.xlsx` : Angular 18 (nginx) + Spring Boot 3 (Java 21) + PostgreSQL 16, le tout dans Docker.
+Remplace le classeur `electricite.xlsx` : Angular 22 (nginx) + Spring Boot 4.2 (Java 25) + PostgreSQL 19, le tout dans Docker.
+
+Déploiement sur le Synology : voir [deploy/LISEZMOI.md](deploy/LISEZMOI.md) (archives d'images + compose, procédure de mise à jour).
 
 | Écran | Équivalent Excel |
 |---|---|
@@ -17,7 +19,7 @@ cp .env.example .env      # puis changer DB_PASSWORD, le port, le dossier des do
 docker compose up -d --build
 ```
 
-L'appli est ensuite sur `http://<ip-du-nas>:8090`. Les données PostgreSQL sont dans `DATA_DIR` (par défaut `./data`).
+L'appli est ensuite sur `http://<ip-du-nas>:8090`. Les données PostgreSQL sont dans `DATA_DIR/pg` (par défaut `./data/pg`).
 
 Pour reprendre l'historique : **Paramètres → Import du fichier Excel** avec `electricite.xlsx`. L'import remplace toutes les données.
 
@@ -33,7 +35,7 @@ docker save zoe-backend:latest zoe-frontend:latest | gzip > zoe-images.tar.gz
 Sauvegarde de la base :
 
 ```bash
-docker compose exec db pg_dump -U zoe zoe > zoe-$(date +%F).sql
+docker compose exec db pg_dump -U zoe -d zoe -Fc > zoe-$(date +%F).dump
 ```
 
 ## Règles de calcul
@@ -48,6 +50,6 @@ docker compose exec db pg_dump -U zoe zoe > zoe-$(date +%F).sql
 
 ```bash
 docker compose up -d db                       # base seule, port non exposé : ajouter "5432:5432" si besoin
-cd backend && mvn spring-boot:run             # API sur :8080
-cd frontend && npm install && npx ng serve    # http://localhost:4200, proxy /api -> :8080
+cd backend && mvn spring-boot:run             # API sur :8080 (Java 25, Maven 3.9)
+cd frontend && npm install && npx ng serve    # Node >= 22.22.3 ou 24, http://localhost:4200, proxy /api -> :8080
 ```
