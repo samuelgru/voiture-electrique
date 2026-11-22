@@ -1,0 +1,119 @@
+<div class="toolbar">
+  <h1>Recharges</h1>
+  <div class="actions">
+    <select [ngModel]="filtreMois()" (ngModelChange)="filtreMois.set($event)" aria-label="Filtrer par mois">
+      <option value="">Tous les mois</option>
+      @for (m of mois(); track m) {
+        <option [value]="m">{{ m + '-01' | date: 'MMMM yyyy' }}</option>
+      }
+    </select>
+    @if (!form()) {
+      <button class="primary" (click)="nouvelle()">+ Nouvelle recharge</button>
+    }
+  </div>
+</div>
+
+@if (erreur()) {
+  <div class="alert error">{{ erreur() }}</div>
+}
+
+@if (form(); as f) {
+  <form class="card" (ngSubmit)="enregistrer()">
+    <h2>{{ f.id ? 'Modifier la recharge' : 'Nouvelle recharge' }}</h2>
+    <div class="form-grid">
+      <label>Lieu
+        <select name="lieu" [(ngModel)]="f.lieu" required>
+          @for (l of lieux; track l.value) {
+            <option [value]="l.value">{{ l.label }}</option>
+          }
+        </select>
+      </label>
+      <label>Début
+        <input type="datetime-local" name="debut" [(ngModel)]="f.debut" required />
+      </label>
+      <label>Fin
+        <input type="datetime-local" name="fin" [(ngModel)]="f.fin" required />
+      </label>
+      <label>% batterie début
+        <input type="number" name="pctDebut" [(ngModel)]="f.pctDebut" min="0" max="100" step="1" />
+      </label>
+      <label>% batterie fin
+        <input type="number" name="pctFin" [(ngModel)]="f.pctFin" min="0" max="100" step="1" />
+      </label>
+      <label>Énergie (kWh)
+        <input type="number" name="kwh" [(ngModel)]="f.kwh" min="0" step="0.01" required />
+      </label>
+      <label style="grid-column: 1 / -1">Commentaire
+        <input type="text" name="commentaire" [(ngModel)]="f.commentaire" maxlength="500" />
+      </label>
+    </div>
+    <div class="actions" style="margin-top: 14px">
+      <button type="submit" class="primary" [disabled]="f.kwh == null || !f.debut || !f.fin">Enregistrer</button>
+      <button type="button" (click)="annuler()">Annuler</button>
+    </div>
+  </form>
+}
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Lieu</th>
+          <th>Début</th>
+          <th>Fin</th>
+          <th class="num">% début</th>
+          <th class="num">% fin</th>
+          <th class="num">% chargé</th>
+          <th class="num">kWh</th>
+          <th class="num">Durée (h)</th>
+          <th class="num">kW</th>
+          <th class="num">HC (h)</th>
+          <th class="num">HP (h)</th>
+          <th class="num">Coût HC</th>
+          <th class="num">Coût HP</th>
+          <th class="num">Total</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of visibles(); track r.id) {
+          <tr>
+            <td><span class="badge" [class.relai]="r.lieu === 'PARC_RELAI'">{{ libelleLieu(r.lieu) }}</span></td>
+            <td>{{ r.debut | date: 'EEE dd/MM/yy HH:mm' }}</td>
+            <td>{{ r.fin | date: 'EEE dd/MM/yy HH:mm' }}</td>
+            <td class="num">{{ r.pctDebut | percent }}</td>
+            <td class="num">{{ r.pctFin | percent }}</td>
+            <td class="num">{{ r.pctCharge | percent }}</td>
+            <td class="num">{{ r.kwh | number: '1.2-2' }}</td>
+            <td class="num">{{ r.nbHeures | number: '1.1-1' }}</td>
+            <td class="num">{{ r.puissanceKw | number: '1.2-2' }}</td>
+            <td class="num">{{ r.heuresHc | number: '1.1-1' }}</td>
+            <td class="num">{{ r.heuresHp | number: '1.1-1' }}</td>
+            <td class="num">{{ r.coutHc | currency: 'EUR' }}</td>
+            <td class="num">{{ r.coutHp | currency: 'EUR' }}</td>
+            <td class="num"><strong>{{ r.coutTotal | currency: 'EUR' }}</strong></td>
+            <td>
+              <div class="actions" style="flex-wrap: nowrap">
+                <button class="icon" (click)="editer(r)" title="Modifier">✎</button>
+                <button class="icon danger" (click)="supprimer(r)" title="Supprimer">✕</button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="15" class="muted">Aucune recharge.</td></tr>
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="6">{{ visibles().length }} recharge(s)</td>
+          <td class="num">{{ totaux().kwh | number: '1.2-2' }}</td>
+          <td class="num">{{ totaux().heures | number: '1.1-1' }}</td>
+          <td colspan="5"></td>
+          <td class="num">{{ totaux().cout | currency: 'EUR' }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>

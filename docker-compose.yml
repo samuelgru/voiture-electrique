@@ -1,0 +1,41 @@
+name: zoe
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: zoe
+      POSTGRES_USER: zoe
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-zoe}
+      TZ: Europe/Paris
+    volumes:
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zoe -d zoe"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    image: zoe-backend:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/zoe
+      DB_USER: zoe
+      DB_PASSWORD: ${DB_PASSWORD:-zoe}
+      TZ: Europe/Paris
+      JAVA_TOOL_OPTIONS: -Xmx256m
+
+  frontend:
+    build: ./frontend
+    image: zoe-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${HTTP_PORT:-8090}:80"

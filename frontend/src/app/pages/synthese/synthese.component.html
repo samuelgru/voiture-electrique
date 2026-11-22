@@ -1,0 +1,147 @@
+@if (erreur()) {
+  <div class="alert error">{{ erreur() }}</div>
+}
+
+@if (synthese(); as s) {
+  <div class="toolbar">
+    <h1>Synthèse</h1>
+    <span class="muted">
+      Contrat du {{ s.contratDebut | date: 'dd/MM/yyyy' }} au {{ s.contratFin | date: 'dd/MM/yyyy' }}
+      · bilan sur {{ s.nbMois }} mois
+    </span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Gain vs essence</h2>
+      <div class="stat" [ngClass]="s.gainTotal >= 0 ? 'positive' : 'negative'">{{ s.gainTotal | currency: 'EUR' }}</div>
+      <div class="stat-sub">soit {{ s.gainParMois | currency: 'EUR' }} par mois</div>
+      <div class="kpi-list" style="margin-top: 12px">
+        <span class="label">Électricité</span><span class="value">{{ s.coutElectricite | currency: 'EUR' }}</span>
+        <span class="label">Essence (simulation)</span><span class="value">{{ s.coutEssence | currency: 'EUR' }}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Kilométrage</h2>
+      <div class="stat">{{ s.kmParcourus | number: '1.0-0' }} km</div>
+      <div class="stat-sub">
+        compteur {{ s.kmActuel | number: '1.0-0' }} km
+        @if (s.dateKmActuel) { au {{ s.dateKmActuel | date: 'dd/MM/yyyy' }} }
+      </div>
+      <div class="kpi-list" style="margin-top: 12px">
+        <span class="label">Km de début</span><span class="value">{{ s.kmDebut | number: '1.0-0' }}</span>
+        <span class="label">Écart contrat (mois clos)</span>
+        <span class="value" [ngClass]="s.ecartContratMoisPrecedent > 0 ? 'negative' : 'positive'">
+          {{ s.ecartContratMoisPrecedent | number: '1.0-0' }} km
+        </span>
+        <span class="label">Écart contrat (mois en cours)</span>
+        <span class="value" [ngClass]="s.ecartContratMois > 0 ? 'negative' : 'positive'">
+          {{ s.ecartContratMois | number: '1.0-0' }} km
+        </span>
+        <span class="label">Pénalité ({{ s.penaliteParKm | currency: 'EUR' : 'symbol' : '1.4-4' }}/km)</span>
+        <span class="value">{{ s.penalite | currency: 'EUR' }}</span>
+        @if (s.kmProjetesFinContrat != null) {
+          <span class="label">Projection fin de contrat</span>
+          <span class="value" [ngClass]="(s.ecartProjeteFinContrat ?? 0) > 0 ? 'negative' : 'positive'">
+            {{ s.kmProjetesFinContrat | number: '1.0-0' }} km
+          </span>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Consommation</h2>
+      <div class="stat">{{ s.kwhTotal | number: '1.0-0' }} kWh</div>
+      <div class="stat-sub">{{ s.coutElectricite | currency: 'EUR' }} au total</div>
+      <div class="kpi-list" style="margin-top: 12px">
+        <span class="label">Prix aux 100 km</span><span class="value">{{ s.coutAu100km | currency: 'EUR' }}</span>
+        <span class="label">kWh aux 100 km</span><span class="value">{{ s.kwhAu100km | number: '1.1-1' }}</span>
+        <span class="label">Essence : conso / 100 km</span><span class="value">{{ s.consoEssenceL100 | number: '1.1-2' }} L</span>
+        <span class="label">Essence : prix du litre</span><span class="value">{{ s.prixLitreEssence | currency: 'EUR' }}</span>
+        <span class="label">Essence : prix aux 100 km</span><span class="value">{{ s.prixEssenceAu100km | currency: 'EUR' }}</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Contrat</h2>
+      <div class="stat">{{ s.contratKm | number: '1.0-0' }} km</div>
+      <div class="stat-sub">sur {{ s.contratDureeAns }} ans</div>
+      <div class="kpi-list" style="margin-top: 12px">
+        <span class="label">Km / an</span><span class="value">{{ s.kmParAn | number: '1.0-0' }}</span>
+        <span class="label">Km / mois</span><span class="value">{{ s.kmParMois | number: '1.0-0' }}</span>
+        <span class="label">Km / jour</span><span class="value">{{ s.kmParJour | number: '1.1-1' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Kilomètres par mois</h2>
+      <div class="chart-box"><canvas #chartKm></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Coût mensuel : électricité vs essence</h2>
+      <div class="chart-box"><canvas #chartCout></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Détail mensuel</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mois</th>
+            <th class="num">Compteur</th>
+            <th class="num">Km mensuel</th>
+            <th class="num">Reste à faire</th>
+            <th class="num">Km / jour</th>
+            <th class="num">Recharges</th>
+            <th class="num">kWh</th>
+            <th class="num">Coût élec.</th>
+            <th class="num">Prix essence</th>
+            <th class="num">Coût essence</th>
+            <th class="num">Gain</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of s.mois; track m.mois) {
+            <tr [class.current]="m.enCours">
+              <td>{{ m.mois | date: 'MMMM yyyy' }} @if (m.enCours) { <span class="badge">en cours</span> }</td>
+              <td class="num">{{ m.kmDebut | number: '1.0-0' }}</td>
+              <td class="num">{{ m.kmMensuel | number: '1.0-0' }}</td>
+              <td class="num" [ngClass]="(m.resteAFaire ?? 0) < 0 ? 'negative' : 'positive'">
+                {{ m.resteAFaire | number: '1.0-0' }}
+              </td>
+              <td class="num">{{ m.kmParJour | number: '1.1-1' }}</td>
+              <td class="num">{{ m.nbRecharges }}</td>
+              <td class="num">{{ m.kwh | number: '1.1-1' }}</td>
+              <td class="num">{{ m.cout | currency: 'EUR' }}</td>
+              <td class="num">{{ m.prixEssence | currency: 'EUR' }}</td>
+              <td class="num">{{ m.coutEssence | currency: 'EUR' }}</td>
+              <td class="num" [ngClass]="(m.gain ?? 0) >= 0 ? 'positive' : 'negative'">{{ m.gain | currency: 'EUR' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="11" class="muted">Aucune donnée. <a routerLink="/parametres">Importer le fichier Excel</a></td></tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>Total</td>
+            <td class="num">{{ s.kmActuel | number: '1.0-0' }}</td>
+            <td class="num">{{ totalKm(s) | number: '1.0-0' }}</td>
+            <td class="num">{{ totalReste(s) | number: '1.0-0' }}</td>
+            <td></td>
+            <td></td>
+            <td class="num">{{ totalKwh(s) | number: '1.1-1' }}</td>
+            <td class="num">{{ s.coutElectricite | currency: 'EUR' }}</td>
+            <td></td>
+            <td class="num">{{ s.coutEssence | currency: 'EUR' }}</td>
+            <td class="num">{{ totalGain(s) | currency: 'EUR' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+}

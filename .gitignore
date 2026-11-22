@@ -1,0 +1,11 @@
+data/
+.env
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+deploy/*.tar.gz
+deploy/data/
+.idea/
+# Données personnelles : le classeur Excel reste en local
+*.xlsx
