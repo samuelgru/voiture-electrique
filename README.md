@@ -3,6 +3,7 @@
 Remplace le classeur `electricite.xlsx` : Angular 22 (nginx) + Spring Boot 4.2 (Java 25) + PostgreSQL 19, le tout dans Docker.
 
 Déploiement sur le Synology : voir [deploy/LISEZMOI.md](deploy/LISEZMOI.md) (archives d'images + compose, procédure de mise à jour).
+Les archives d'images se génèrent avec `./deploy/build-images.sh`.
 
 | Écran | Équivalent Excel |
 |---|---|

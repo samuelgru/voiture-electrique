@@ -7,6 +7,12 @@ Fichiers :
 - `postgres-19-alpine.tar.gz` : image PostgreSQL, utile seulement si le NAS ne peut pas la télécharger depuis Docker Hub
 - `docker-compose.yml` et `.env.example` (à renommer en `.env`) : le projet Container Manager
 
+Les archives `.tar.gz` ne sont pas dans git : elles se génèrent sur le PC (Docker + buildx) avec
+```bash
+./deploy/build-images.sh                  # zoe-backend et zoe-frontend, version lue dans backend/pom.xml
+./deploy/build-images.sh --avec-postgres  # + l'image postgres:19-alpine
+```
+
 Les commandes SSH ci-dessous se lancent depuis `/volume1/docker/zoe` (`cd /volume1/docker/zoe`).
 
 ---
