@@ -3,6 +3,7 @@ import { CurrencyPipe, DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
 import { ApiService, messageErreur } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { Synthese } from '../../core/models';
 
 Chart.register(...registerables);
@@ -14,6 +15,7 @@ Chart.register(...registerables);
 })
 export class SyntheseComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
+  auth = inject(AuthService);
 
   synthese = signal<Synthese | null>(null);
   erreur = signal<string | null>(null);

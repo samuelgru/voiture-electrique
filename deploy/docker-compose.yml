@@ -22,7 +22,7 @@ services:
       retries: 10
 
   backend:
-    image: zoe-backend:2.0.0
+    image: zoe-backend:2.1.0
     container_name: zoe-backend
     restart: unless-stopped
     depends_on:
@@ -34,9 +34,14 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-zoe}
       TZ: Europe/Paris
       JAVA_TOOL_OPTIONS: -Xmx256m
+      # Comptes de connexion (définis dans .env)
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD doit être défini dans .env}
+      USER_USERNAME: ${USER_USERNAME:-utilisateur}
+      USER_PASSWORD: ${USER_PASSWORD:-}
 
   frontend:
-    image: zoe-frontend:2.0.0
+    image: zoe-frontend:2.1.0
     container_name: zoe-frontend
     restart: unless-stopped
     depends_on:

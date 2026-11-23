@@ -123,7 +123,7 @@
               <td class="num" [ngClass]="(m.gain ?? 0) >= 0 ? 'positive' : 'negative'">{{ m.gain | currency: 'EUR' }}</td>
             </tr>
           } @empty {
-            <tr><td colspan="11" class="muted">Aucune donnée. <a routerLink="/parametres">Importer le fichier Excel</a></td></tr>
+            <tr><td colspan="11" class="muted">Aucune donnée.@if (auth.estAdmin()) { <a routerLink="/parametres">Importer le fichier Excel</a> }</td></tr>
           }
         </tbody>
         <tfoot>

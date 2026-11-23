@@ -31,6 +31,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-zoe}
       TZ: Europe/Paris
       JAVA_TOOL_OPTIONS: -Xmx256m
+      # Comptes de connexion (définis dans .env)
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD doit être défini dans .env}
+      USER_USERNAME: ${USER_USERNAME:-utilisateur}
+      USER_PASSWORD: ${USER_PASSWORD:-}
 
   frontend:
     build: ./frontend

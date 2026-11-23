@@ -19,9 +19,22 @@ spring:
       max-request-size: 20MB
   jackson:
     time-zone: Europe/Paris
+  session:
+    jdbc:
+      initialize-schema: never   # tables créées par Flyway (V2)
 
 server:
   port: 8080
+  # Derrière nginx + reverse proxy Synology : prendre en compte X-Forwarded-Proto (cookie Secure en HTTPS)
+  forward-headers-strategy: native
+  servlet:
+    session:
+      timeout: 30d
+      cookie:
+        name: ZOE_SESSION
+        http-only: true
+        same-site: lax
+        max-age: 30d
 
 management:
   endpoints:
@@ -31,3 +44,10 @@ management:
 
 zoe:
   timezone: Europe/Paris
+  securite:
+    admin:
+      identifiant: ${ADMIN_USERNAME:admin}
+      mot-de-passe: ${ADMIN_PASSWORD:}
+    utilisateur:
+      identifiant: ${USER_USERNAME:utilisateur}
+      mot-de-passe: ${USER_PASSWORD:}

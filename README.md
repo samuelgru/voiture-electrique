@@ -12,10 +12,14 @@ Déploiement sur le Synology : voir [deploy/LISEZMOI.md](deploy/LISEZMOI.md) (ar
 | **Tarifs** | onglet « Prix Electricité » (+ plage d'heures creuses par tarif) |
 | **Paramètres** | contrat (durée, km, compteur de départ, pénalité), conso essence, **import Excel** |
 
+Connexion obligatoire, deux comptes définis dans `.env` : **administrateur** (`ADMIN_USERNAME` / `ADMIN_PASSWORD`, accès à tout)
+et **utilisateur** (`USER_USERNAME` / `USER_PASSWORD`, sans les onglets Tarifs et Paramètres ni l'import).
+Les droits sont vérifiés côté API (Spring Security), pas seulement dans le menu.
+
 ## Déploiement sur le NAS
 
 ```bash
-cp .env.example .env      # puis changer DB_PASSWORD, le port, le dossier des données
+cp .env.example .env      # puis changer DB_PASSWORD, les mots de passe des comptes, le port
 docker compose up -d --build
 ```
 
@@ -49,6 +53,7 @@ docker compose exec db pg_dump -U zoe -d zoe -Fc > zoe-$(date +%F).dump
 ## Développement
 
 ```bash
+export ADMIN_PASSWORD=... USER_PASSWORD=...   # ou un fichier .env
 docker compose up -d db                       # base seule, port non exposé : ajouter "5432:5432" si besoin
 cd backend && mvn spring-boot:run             # API sur :8080 (Java 25, Maven 3.9)
 cd frontend && npm install && npx ng serve    # Node >= 22.22.3 ou 24, http://localhost:4200, proxy /api -> :8080
