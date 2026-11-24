@@ -22,8 +22,15 @@ import { AuthService } from './core/auth.service';
           }
         </nav>
         <div class="session">
-          <span class="muted">{{ u.identifiant }}@if (auth.estAdmin()) { · admin }</span>
-          <button class="icon" (click)="auth.deconnecter()">Déconnexion</button>
+          @if (auth.estInvite()) {
+            <span class="muted" [title]="'Adresse vue par le serveur : ' + (u.ip ?? '?')">Consultation · réseau local</span>
+            <button class="icon" routerLink="/login">Mode admin</button>
+          } @else {
+            <span class="muted">{{ u.identifiant }}@if (auth.estAdmin()) { · admin }</span>
+            <button class="icon" (click)="auth.deconnecter()">
+              {{ auth.estAdmin() ? 'Quitter le mode admin' : 'Déconnexion' }}
+            </button>
+          }
         </div>
       </header>
     }

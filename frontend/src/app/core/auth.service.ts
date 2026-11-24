@@ -3,11 +3,14 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, catchError, firstValueFrom, map, of, tap } from 'rxjs';
 
-export type Role = 'ADMIN' | 'USER';
+/** INVITE = appareil du réseau local sans session (consultation seule). */
+export type Role = 'ADMIN' | 'USER' | 'INVITE';
 
 export interface Utilisateur {
   identifiant: string;
   role: Role;
+  /** Adresse(s) vue(s) par le serveur, utile pour diagnostiquer la détection du réseau local. */
+  ip?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -18,6 +21,9 @@ export class AuthService {
   /** undefined = pas encore vérifié, null = non connecté */
   readonly utilisateur = signal<Utilisateur | null | undefined>(undefined);
   readonly estAdmin = computed(() => this.utilisateur()?.role === 'ADMIN');
+  readonly estInvite = computed(() => this.utilisateur()?.role === 'INVITE');
+  /** Saisie autorisée (recharges, relevés) : tout le monde sauf l'invité du réseau local. */
+  readonly peutSaisir = computed(() => !!this.utilisateur() && !this.estInvite());
   private chargement?: Promise<Utilisateur | null>;
 
   /** Interroge le serveur une seule fois pour savoir qui est connecté. */
@@ -48,10 +54,13 @@ export class AuthService {
       .subscribe(() => this.sessionExpiree());
   }
 
-  /** Appelé aussi quand le serveur répond 401 (session expirée). */
+  /**
+   * Appelé après une déconnexion ou quand le serveur répond 401 (session expirée) : on redemande qui je suis,
+   * car sur le réseau local le serveur me reconnaît alors en invité (consultation).
+   */
   sessionExpiree(): void {
-    this.utilisateur.set(null);
+    this.utilisateur.set(undefined);
     this.chargement = undefined;
-    this.router.navigate(['/login']);
+    this.verifier().then((u) => this.router.navigate([u ? '/' : '/login']));
   }
 }

@@ -54,10 +54,32 @@ Deux comptes, définis dans `.env` :
 | Administrateur | `ADMIN_USERNAME`, `ADMIN_PASSWORD` (obligatoire) | tout |
 | Utilisateur | `USER_USERNAME`, `USER_PASSWORD` (vide = pas de compte) | Synthèse, Recharges, Kilométrage (lecture et saisie) ; ni Tarifs, ni Paramètres, ni import |
 
+Les appareils du réseau local sont en plus connectés automatiquement en **consultation seule** (voir « Réseau local » plus bas).
+
 - Sans `ADMIN_PASSWORD`, le projet refuse de démarrer.
 - Pour changer un mot de passe : modifier `.env` puis redémarrer le projet (Arrêter / Démarrer).
 - 5 mots de passe faux de suite bloquent l'identifiant pendant 15 minutes.
-- La connexion reste active 30 jours sur l'appareil, même après un redémarrage du NAS.
+- La connexion de l'utilisateur reste active 30 jours sur l'appareil, même après un redémarrage du NAS.
+- La session **administrateur** expire après 30 minutes d'inactivité (`ADMIN_SESSION_MINUTES`, `0` = 30 jours comme l'utilisateur).
+
+---
+
+## Réseau local : consultation automatique et mode admin
+
+Avec `LOCAL_NETWORK=192.168.1.0/24` dans `.env` (plusieurs réseaux possibles, séparés par des virgules ; vide = désactivé),
+tout appareil de ce réseau est connecté automatiquement en **consultation seule** : Synthèse, Recharges et Kilométrage en lecture,
+sans saisie, modification ni suppression, et sans Tarifs ni Paramètres. Aucune session n'est créée pour ces appareils.
+
+- **Mode admin** : bouton en haut à droite → connexion avec le compte administrateur. « Quitter le mode admin » (ou 30 minutes
+  d'inactivité) ramène en consultation. Le compte utilisateur reste utilisable de la même façon pour saisir des recharges.
+- **Hors du réseau local** (par ex. depuis Internet), rien ne change : identifiant et mot de passe obligatoires.
+- Un appareil n'est considéré comme local que si **toutes** les adresses de la chaîne de connexion le sont : un visiteur venu
+  d'Internet via le reverse proxy du NAS n'est jamais connecté automatiquement, même en falsifiant `X-Forwarded-For`.
+- **Vérification** : en mode consultation, survoler « Consultation · réseau local » affiche l'adresse vue par le serveur.
+  Elle doit être celle de l'appareil (ex. `192.168.1.42`, ou `192.168.1.42,192.168.1.10` derrière le reverse proxy du NAS).
+  Si elle indique une adresse Docker (`172.x.x.x`), la détection ne fonctionne pas pour cet accès : ne pas élargir
+  `LOCAL_NETWORK` à `172.16.0.0/12` sans comprendre pourquoi, cela rendrait « local » tout accès passant par cette adresse.
+- Tous les appareils du réseau (y compris un Wi-Fi invité qui partagerait ce réseau) peuvent consulter les données.
 
 ---
 

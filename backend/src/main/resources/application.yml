@@ -45,6 +45,10 @@ management:
 zoe:
   timezone: Europe/Paris
   securite:
+    # Réseaux (CIDR, séparés par des virgules) connectés automatiquement en consultation ; vide = désactivé
+    reseau-local: ${LOCAL_NETWORK:}
+    # Inactivité avant la fin d'une session administrateur, en minutes (0 = 30 jours comme les autres comptes)
+    duree-session-admin-minutes: ${ADMIN_SESSION_MINUTES:30}
     admin:
       identifiant: ${ADMIN_USERNAME:admin}
       mot-de-passe: ${ADMIN_PASSWORD:}

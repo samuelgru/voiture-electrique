@@ -17,6 +17,9 @@ Connexion obligatoire, deux comptes définis dans `.env` : **administrateur** (`
 et **utilisateur** (`USER_USERNAME` / `USER_PASSWORD`, sans les onglets Tarifs et Paramètres ni l'import).
 Les droits sont vérifiés côté API (Spring Security), pas seulement dans le menu.
 
+Sur le réseau local (`LOCAL_NETWORK=192.168.1.0/24` dans `.env`), les appareils sont connectés automatiquement en **consultation seule** ;
+le bouton « Mode admin » ouvre la connexion administrateur (session de 30 minutes d'inactivité). Détails dans [deploy/LISEZMOI.md](deploy/LISEZMOI.md).
+
 ## Déploiement sur le NAS
 
 ```bash

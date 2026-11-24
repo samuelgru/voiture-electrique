@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, messageErreur } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { ReleveKm } from '../../core/models';
 
 @Component({
@@ -10,12 +11,12 @@ import { ReleveKm } from '../../core/models';
   template: `
     <div class="toolbar">
       <h1>Kilométrage</h1>
-      @if (!form()) {
+      @if (!form() && auth.peutSaisir()) {
         <button class="primary" (click)="nouveau()">+ Nouveau relevé</button>
       }
     </div>
     <p class="muted">
-      Saisis le compteur au 1<sup>er</sup> de chaque mois : la synthèse en déduit les kilomètres mensuels.
+      Le compteur se relève au 1<sup>er</sup> de chaque mois : la synthèse en déduit les kilomètres mensuels.
       Le relevé le plus récent sert de « kilométrage actuel ».
     </p>
 
@@ -50,10 +51,12 @@ import { ReleveKm } from '../../core/models';
                 <td class="num">{{ r.releve.kilometrage | number: '1.0-0' }} km</td>
                 <td class="num">{{ r.delta != null ? (r.delta | number: '1.0-0') + ' km' : '' }}</td>
                 <td>
-                  <div class="actions">
-                    <button class="icon" (click)="editer(r.releve)" title="Modifier">✎</button>
-                    <button class="icon danger" (click)="supprimer(r.releve)" title="Supprimer">✕</button>
-                  </div>
+                  @if (auth.peutSaisir()) {
+                    <div class="actions">
+                      <button class="icon" (click)="editer(r.releve)" title="Modifier">✎</button>
+                      <button class="icon danger" (click)="supprimer(r.releve)" title="Supprimer">✕</button>
+                    </div>
+                  }
                 </td>
               </tr>
             } @empty {
@@ -67,6 +70,7 @@ import { ReleveKm } from '../../core/models';
 })
 export class RelevesComponent implements OnInit {
   private api = inject(ApiService);
+  auth = inject(AuthService);
 
   releves = signal<ReleveKm[]>([]);
   erreur = signal<string | null>(null);

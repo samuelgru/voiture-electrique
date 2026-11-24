@@ -7,7 +7,7 @@
         <option [value]="m">{{ m + '-01' | date: 'MMMM yyyy' }}</option>
       }
     </select>
-    @if (!form()) {
+    @if (!form() && auth.peutSaisir()) {
       <button class="primary" (click)="nouvelle()">+ Nouvelle recharge</button>
     }
   </div>
@@ -94,10 +94,12 @@
             <td class="num">{{ r.coutHp | currency: 'EUR' }}</td>
             <td class="num"><strong>{{ r.coutTotal | currency: 'EUR' }}</strong></td>
             <td>
-              <div class="actions" style="flex-wrap: nowrap">
-                <button class="icon" (click)="editer(r)" title="Modifier">✎</button>
-                <button class="icon danger" (click)="supprimer(r)" title="Supprimer">✕</button>
-              </div>
+              @if (auth.peutSaisir()) {
+                <div class="actions" style="flex-wrap: nowrap">
+                  <button class="icon" (click)="editer(r)" title="Modifier">✎</button>
+                  <button class="icon danger" (click)="supprimer(r)" title="Supprimer">✕</button>
+                </div>
+              }
             </td>
           </tr>
         } @empty {

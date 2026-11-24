@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, messageErreur } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { LIEUX, Lieu, Recharge, RechargeRequest } from '../../core/models';
 
 interface FormRecharge {
@@ -22,6 +23,7 @@ interface FormRecharge {
 })
 export class RechargesComponent implements OnInit {
   private api = inject(ApiService);
+  auth = inject(AuthService);
 
   lieux = LIEUX;
   recharges = signal<Recharge[]>([]);

@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -26,6 +27,7 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.savedrequest.NullRequestCache;
@@ -36,10 +38,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Deux rôles :
+ * Trois rôles :
  * <ul>
  *   <li>ADMIN : tout ;</li>
- *   <li>USER : synthèse, recharges et kilométrage (pas les tarifs, les paramètres ni l'import).</li>
+ *   <li>USER : synthèse, recharges et kilométrage, en lecture et saisie (pas les tarifs, les paramètres, l'import ni l'export) ;</li>
+ *   <li>INVITE : consultation seule, attribué automatiquement aux appareils du réseau local sans session.</li>
  * </ul>
  * Connexion par formulaire sur /api/auth/login, session en base, protection CSRF par cookie XSRF-TOKEN (lu par Angular).
  */
@@ -50,22 +53,33 @@ public class SecuriteConfig {
 
     public static final String ADMIN = "ADMIN";
     public static final String USER = "USER";
+    /** Appareil du réseau local sans session : consultation seule. */
+    public static final String INVITE = "INVITE";
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, SecuriteProperties props) throws Exception {
+        InviteReseauLocalFilter invite = new InviteReseauLocalFilter(props.reseauLocal());
         http
                 .csrf(csrf -> csrf.spa())
                 // Pas de mémorisation de la requête refusée : évite de créer une session par visiteur anonyme
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
+                .addFilterBefore(invite, AnonymousAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/tarifs/**", "/api/parametres/**", "/api/import/**", "/api/export/**").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(ADMIN, USER, INVITE)
                         .requestMatchers("/api/**").hasAnyRole(ADMIN, USER)
                         .anyRequest().denyAll())
                 .formLogin(form -> form
                         .loginProcessingUrl("/api/auth/login")
-                        .successHandler((req, res, auth) -> ecrireUtilisateur(res, auth))
+                        .successHandler((req, res, auth) -> {
+                            // Session administrateur courte : on retombe en consultation après une période d'inactivité
+                            if (ADMIN.equals(role(auth)) && props.dureeAdminMinutes() > 0) {
+                                req.getSession().setMaxInactiveInterval(props.dureeAdminMinutes() * 60);
+                            }
+                            ecrireUtilisateur(res, auth);
+                        })
                         .failureHandler(SecuriteConfig::ecrireEchec))
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
@@ -123,11 +137,22 @@ public class SecuriteConfig {
     }
 
     static String role(Authentication auth) {
-        return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_" + ADMIN)) ? ADMIN : USER;
+        if (possede(auth, ADMIN)) return ADMIN;
+        return possede(auth, INVITE) ? INVITE : USER;
+    }
+
+    private static boolean possede(Authentication auth, String role) {
+        return auth.getAuthorities().stream().anyMatch(x -> x.getAuthority().equals("ROLE_" + role));
     }
 
     static String json(String identifiant, String role) {
         return "{\"identifiant\":\"" + echapper(identifiant) + "\",\"role\":\"" + role + "\"}";
+    }
+
+    /** Variante avec l'adresse vue par le serveur : sert à diagnostiquer la détection du réseau local. */
+    static String json(String identifiant, String role, String ip) {
+        return "{\"identifiant\":\"" + echapper(identifiant) + "\",\"role\":\"" + role
+                + "\",\"ip\":\"" + echapper(ip) + "\"}";
     }
 
     private static void ecrireUtilisateur(HttpServletResponse res, Authentication auth) throws IOException {
