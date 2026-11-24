@@ -23,7 +23,7 @@ services:
       retries: 10
 
   backend:
-    image: ghcr.io/samuelgru/zoe-backend:2.1.0
+    image: ghcr.io/samuelgru/zoe-backend:2.2.0
     container_name: zoe-backend
     restart: unless-stopped
     depends_on:
@@ -42,7 +42,7 @@ services:
       USER_PASSWORD: ${USER_PASSWORD:-}
 
   frontend:
-    image: ghcr.io/samuelgru/zoe-frontend:2.1.0
+    image: ghcr.io/samuelgru/zoe-frontend:2.2.0
     container_name: zoe-frontend
     restart: unless-stopped
     depends_on:
