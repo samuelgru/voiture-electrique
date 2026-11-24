@@ -1,6 +1,6 @@
 # Déploiement de « Ma Zoé » sur le Synology DS220+
 
-Version 2.2.0 (export Excel) : Spring Boot 4.2 / Java 25, Angular 22, PostgreSQL 19, connexion par identifiant / mot de passe.
+Version 2.3.0 (export Excel, consultation automatique sur le réseau local) : Spring Boot 4.2 / Java 25, Angular 22, PostgreSQL 19, connexion par identifiant / mot de passe.
 
 Les images sont publiées sur GitHub Container Registry : `ghcr.io/samuelgru/zoe-backend` et `ghcr.io/samuelgru/zoe-frontend`.
 
@@ -12,9 +12,9 @@ Fichiers :
 1. Mettre à jour la version dans `backend/pom.xml` et dans `deploy/docker-compose.yml` (les trois doivent être identiques), puis commiter.
 2. Poser et pousser le tag :
    ```bash
-   git tag v2.2.0 && git push origin main v2.2.0
+   git tag v2.3.0 && git push origin main v2.3.0
    ```
-3. Le workflow GitHub Actions « Publish » construit et publie les deux images (`:2.2.0` et `:latest`). Suivi dans l'onglet Actions.
+3. Le workflow GitHub Actions « Publish » construit et publie les deux images (`:2.3.0` et `:latest`). Suivi dans l'onglet Actions.
 
 ## Se connecter à GHCR (une seule fois sur le NAS)
 
