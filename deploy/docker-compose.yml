@@ -1,5 +1,6 @@
 # Déploiement sur le NAS Synology (Container Manager > Projet)
-# Images à importer avant : zoe-backend, zoe-frontend (et postgres si le NAS n'a pas accès à Docker Hub)
+# Images tirées de GitHub Container Registry (docker login ghcr.io requis si elles sont privées, voir LISEZMOI.md).
+# Solution de repli sans registre : importer les archives .tar.gz (./build-images.sh) et remplacer par zoe-backend:<version> / zoe-frontend:<version>.
 name: zoe
 
 services:
@@ -22,7 +23,7 @@ services:
       retries: 10
 
   backend:
-    image: zoe-backend:2.1.0
+    image: ghcr.io/samuelgru/zoe-backend:2.1.0
     container_name: zoe-backend
     restart: unless-stopped
     depends_on:
@@ -41,7 +42,7 @@ services:
       USER_PASSWORD: ${USER_PASSWORD:-}
 
   frontend:
-    image: zoe-frontend:2.1.0
+    image: ghcr.io/samuelgru/zoe-frontend:2.1.0
     container_name: zoe-frontend
     restart: unless-stopped
     depends_on:
