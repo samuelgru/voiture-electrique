@@ -47,6 +47,9 @@ public class ImportExcelService {
         this.zone = ZoneId.of(zone);
     }
 
+    /** Colonne du commentaire dans l'onglet "Zoe" (absente du classeur historique). */
+    static final int COL_COMMENTAIRE = 15;
+
     private record PlageHc(LocalDate date, LocalTime debut, LocalTime fin) {}
 
     @Transactional
@@ -83,6 +86,8 @@ public class ImportExcelService {
                 r.setPctDebut(nombre(row.getCell(3)));
                 r.setPctFin(nombre(row.getCell(4)));
                 r.setKwh(kwh);
+                String commentaire = texte(row.getCell(COL_COMMENTAIRE));
+                if (commentaire != null && !commentaire.isBlank()) r.setCommentaire(commentaire.trim());
                 recharges.add(r);
 
                 LocalTime hcDebut = heureFormule(row.getCell(8), DEBUT_HC);
@@ -94,6 +99,7 @@ public class ImportExcelService {
 
             // ---------- Tarifs
             TreeMap<LocalDate, Tarif> tarifs = new TreeMap<>();
+            Map<LocalDate, LocalTime[]> plagesExplicites = new HashMap<>();
             for (int i = 2; i <= prix.getLastRowNum(); i++) {
                 Row row = prix.getRow(i);
                 if (row == null) continue;
@@ -108,8 +114,19 @@ public class ImportExcelService {
                 t.setPrixParcRelai(Optional.ofNullable(nombre(row.getCell(3))).orElse(0.0));
                 t.setPrixEssence(Optional.ofNullable(nombre(row.getCell(4))).orElse(0.0));
                 tarifs.put(t.getDateEffet(), t);
+                LocalTime hcDebut = heure(row.getCell(5));
+                LocalTime hcFin = heure(row.getCell(6));
+                if (hcDebut != null && hcFin != null) {
+                    plagesExplicites.put(t.getDateEffet(), new LocalTime[]{hcDebut, hcFin});
+                }
             }
             appliquerPlagesHc(tarifs, plages);
+            // Les heures creuses saisies dans les colonnes F et G (fichier exporté par l'appli) priment sur les formules
+            plagesExplicites.forEach((date, h) -> {
+                Tarif t = tarifs.get(date);
+                t.setHeureDebutHc(h[0]);
+                t.setHeureFinHc(h[1]);
+            });
 
             // ---------- Synthèse : paramètres du contrat et relevés kilométriques
             List<ReleveKm> releves = new ArrayList<>();
@@ -127,7 +144,7 @@ public class ImportExcelService {
                 if (consoEssence != null) p.setConsoEssenceL100(consoEssence);
                 if (penalite != null) p.setPenaliteParKm(penalite);
 
-                Map<LocalDate, Integer> parDate = new TreeMap<>();
+                TreeMap<LocalDate, Integer> parDate = new TreeMap<>();
                 LocalDate premierMois = null;
                 for (int i = 11; i <= synthese.getLastRowNum(); i++) {
                     Row row = synthese.getRow(i);
@@ -138,11 +155,17 @@ public class ImportExcelService {
                     if (premierMois == null) premierMois = mois.toLocalDate();
                     parDate.put(mois.toLocalDate(), km.intValue());
                 }
-                if (premierMois != null) {
+                LocalDateTime debutContrat = dateHeure(cellule(synthese, "F4"));
+                if (debutContrat != null) {
+                    p.setContratDebut(debutContrat.toLocalDate());
+                } else if (premierMois != null) {
                     p.setContratDebut(premierMois);
                 }
                 Double kmActuel = nombre(cellule(synthese, "F3"));
-                if (kmActuel != null) {
+                // Un fichier exporté contient déjà le dernier relevé dans le tableau : pas de doublon à la date du jour
+                boolean dejaDansTableau = kmActuel != null && !parDate.isEmpty()
+                        && parDate.lastEntry().getValue() == kmActuel.intValue();
+                if (kmActuel != null && !dejaDansTableau) {
                     parDate.put(LocalDate.now(zone), kmActuel.intValue());
                 }
                 parDate.forEach((d, km) -> releves.add(new ReleveKm(d, km)));
@@ -256,6 +279,13 @@ public class ImportExcelService {
         double v = c.getNumericCellValue();
         long secondes = Math.round(v * 86400);
         return LocalDateTime.of(1899, 12, 30, 0, 0).plus(secondes, ChronoUnit.SECONDS);
+    }
+
+    /** Heure saisie dans une cellule (fraction de jour). */
+    private static LocalTime heure(Cell c) {
+        if (c == null || type(c) != CellType.NUMERIC) return null;
+        long minutes = Math.round((c.getNumericCellValue() % 1) * 1440) % 1440;
+        return LocalTime.ofSecondOfDay(minutes * 60);
     }
 
     private static LocalTime heureFormule(Cell c, Pattern pattern) {

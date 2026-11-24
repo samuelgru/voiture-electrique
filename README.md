@@ -11,7 +11,7 @@ Les archives d'images se génèrent avec `./deploy/build-images.sh`.
 | **Recharges** | onglet « Zoe » (heures HC/HP, coût HC, coût HP et total calculés automatiquement) |
 | **Kilométrage** | colonne « Kilométrage » de la synthèse + km actuel (un relevé au 1er de chaque mois) |
 | **Tarifs** | onglet « Prix Electricité » (+ plage d'heures creuses par tarif) |
-| **Paramètres** | contrat (durée, km, compteur de départ, pénalité), conso essence, **import Excel** |
+| **Paramètres** | contrat (durée, km, compteur de départ, pénalité), conso essence, **export et import Excel** |
 
 Connexion obligatoire, deux comptes définis dans `.env` : **administrateur** (`ADMIN_USERNAME` / `ADMIN_PASSWORD`, accès à tout)
 et **utilisateur** (`USER_USERNAME` / `USER_PASSWORD`, sans les onglets Tarifs et Paramètres ni l'import).

@@ -60,7 +60,7 @@ public class SecuriteConfig {
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/api/tarifs/**", "/api/parametres/**", "/api/import/**").hasRole(ADMIN)
+                        .requestMatchers("/api/tarifs/**", "/api/parametres/**", "/api/import/**", "/api/export/**").hasRole(ADMIN)
                         .requestMatchers("/api/**").hasAnyRole(ADMIN, USER)
                         .anyRequest().denyAll())
                 .formLogin(form -> form

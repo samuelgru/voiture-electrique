@@ -34,9 +34,23 @@ import { ImportResult, Parametres } from '../../core/models';
     }
 
     <div class="card">
+      <h2>Export Excel</h2>
+      <p class="muted">
+        Télécharge toutes les données (recharges, tarifs, relevés, paramètres) dans un fichier Excel
+        au format de l'import : il peut être réimporté tel quel, et sert de modèle (voir l'onglet « Lisez-moi »).
+      </p>
+      <div class="actions">
+        <button class="primary" [disabled]="exportEnCours()" (click)="exporter()">
+          {{ exportEnCours() ? 'Export…' : 'Exporter' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Import du fichier Excel</h2>
       <p class="muted">
-        Importe <code>electricite.xlsx</code> (onglets « Zoe », « Prix Electricité » et « Synthèse »).
+        Importe un fichier Excel (onglets « Zoe », « Prix Electricité » et « Synthèse ») : le classeur
+        <code>electricite.xlsx</code> ou un fichier exporté ci-dessus.
         <strong>Toutes les recharges, tarifs et relevés existants sont remplacés.</strong>
       </p>
       <div class="actions">
@@ -64,6 +78,7 @@ export class ParametresComponent implements OnInit {
   message = signal<string | null>(null);
   fichier = signal<File | null>(null);
   enCours = signal(false);
+  exportEnCours = signal(false);
   resultat = signal<ImportResult | null>(null);
 
   ngOnInit(): void {
@@ -87,6 +102,26 @@ export class ParametresComponent implements OnInit {
         this.message.set('Paramètres enregistrés.');
       },
       error: (e) => this.erreur.set(messageErreur(e)),
+    });
+  }
+
+  exporter(): void {
+    this.exportEnCours.set(true);
+    this.api.exporter().subscribe({
+      next: (blob) => {
+        this.exportEnCours.set(false);
+        this.erreur.set(null);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `zoe-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (e) => {
+        this.exportEnCours.set(false);
+        this.erreur.set(messageErreur(e));
+      },
     });
   }
 

@@ -56,6 +56,10 @@ export class ApiService {
     return this.http.put<Parametres>(`${this.base}/parametres`, p);
   }
 
+  exporter(): Observable<Blob> {
+    return this.http.get(`${this.base}/export`, { responseType: 'blob' });
+  }
+
   importer(fichier: File): Observable<ImportResult> {
     const form = new FormData();
     form.append('fichier', fichier);
