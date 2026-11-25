@@ -13,7 +13,7 @@
 
     <groupId>fr.perso</groupId>
     <artifactId>zoe-backend</artifactId>
-    <version>2.3.0</version>
+    <version>2.3.1</version>
     <name>zoe-backend</name>
     <description>Suivi de la consommation électrique de la Zoé</description>
 
