@@ -3,11 +3,12 @@ import { CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/commo
 import { FormsModule } from '@angular/forms';
 import { ApiService, messageErreur } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { LIEUX, Lieu, Recharge, RechargeRequest } from '../../core/models';
+import { LieuPerso, Recharge, RechargeRequest } from '../../core/models';
 
 interface FormRecharge {
   id: number | null;
-  lieu: Lieu;
+  /** 'MAISON' ou 'AUTRE:<id du lieu>'. */
+  lieu: string;
   debut: string;
   fin: string;
   pctDebut: number | null;
@@ -25,7 +26,7 @@ export class RechargesComponent implements OnInit {
   private api = inject(ApiService);
   auth = inject(AuthService);
 
-  lieux = LIEUX;
+  lieux = signal<LieuPerso[]>([]);
   recharges = signal<Recharge[]>([]);
   erreur = signal<string | null>(null);
   form = signal<FormRecharge | null>(null);
@@ -45,6 +46,10 @@ export class RechargesComponent implements OnInit {
 
   ngOnInit(): void {
     this.charger();
+    this.api.lieux().subscribe({
+      next: (l) => this.lieux.set(l),
+      error: (e) => this.erreur.set(messageErreur(e)),
+    });
   }
 
   charger(): void {
@@ -72,7 +77,7 @@ export class RechargesComponent implements OnInit {
   editer(r: Recharge): void {
     this.form.set({
       id: r.id,
-      lieu: r.lieu,
+      lieu: r.lieu === 'AUTRE' ? `AUTRE:${r.lieuPersoId}` : r.lieu,
       debut: r.debut.slice(0, 16),
       fin: r.fin.slice(0, 16),
       pctDebut: r.pctDebut != null ? Math.round(r.pctDebut * 100) : null,
@@ -90,8 +95,10 @@ export class RechargesComponent implements OnInit {
   enregistrer(): void {
     const f = this.form();
     if (!f || f.kwh == null) return;
+    const [lieu, lieuId] = f.lieu.split(':');
     const req: RechargeRequest = {
-      lieu: f.lieu,
+      lieu: lieu as RechargeRequest['lieu'],
+      lieuPersoId: lieuId ? Number(lieuId) : null,
       debut: f.debut,
       fin: f.fin,
       pctDebut: f.pctDebut != null ? f.pctDebut / 100 : null,
@@ -118,8 +125,8 @@ export class RechargesComponent implements OnInit {
     });
   }
 
-  libelleLieu(l: Lieu): string {
-    return LIEUX.find((x) => x.value === l)?.label ?? l;
+  libelleLieu(r: Recharge): string {
+    return r.lieu === 'AUTRE' ? (r.lieuNom ?? 'Autre') : 'Maison';
   }
 }
 

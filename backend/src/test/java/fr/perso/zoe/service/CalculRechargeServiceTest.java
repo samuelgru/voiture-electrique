@@ -23,7 +23,6 @@ class CalculRechargeServiceTest {
         t.setDateEffet(date);
         t.setPrixHc(0.1635);
         t.setPrixHp(0.2081);
-        t.setPrixParcRelai(0);
         t.setPrixEssence(1.7);
         t.setHeureDebutHc(LocalTime.of(22, 0));
         t.setHeureFinHc(finHc);
@@ -54,10 +53,16 @@ class CalculRechargeServiceTest {
     }
 
     @Test
-    void parcRelaiAuTarifDuParc() {
-        Recharge r = recharge(Lieu.PARC_RELAI, LocalDateTime.of(2025, 12, 21, 11, 32), LocalDateTime.of(2025, 12, 21, 12, 42), 3.55);
+    void lieuPersonnaliseAuPrixDuKwhSansHeuresCreuses() {
+        fr.perso.zoe.model.LieuPerso lieu = new fr.perso.zoe.model.LieuPerso();
+        lieu.setNom("Borne du travail");
+        lieu.setPrixKwh(0.40);
+        // 22:00 → 08:00 : tombe en partie dans les HC de la maison, mais le prix reste 0,40 €/kWh
+        Recharge r = recharge(Lieu.AUTRE, LocalDateTime.of(2026, 1, 10, 22, 0), LocalDateTime.of(2026, 1, 11, 8, 0), 10);
+        r.setLieuPerso(lieu);
         RechargeDto dto = service.calculer(r, List.of(tarif(LocalDate.of(2025, 9, 1), LocalTime.of(6, 0))));
-        assertThat(dto.coutTotal()).isZero();
+        assertThat(dto.coutTotal()).isCloseTo(4.0, within(1e-9));
+        assertThat(dto.lieuNom()).isEqualTo("Borne du travail");
     }
 
     @Test

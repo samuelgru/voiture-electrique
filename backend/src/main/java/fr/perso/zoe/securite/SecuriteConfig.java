@@ -41,7 +41,7 @@ import java.util.List;
  * Trois rôles :
  * <ul>
  *   <li>ADMIN : tout ;</li>
- *   <li>USER : synthèse, recharges et kilométrage, en lecture et saisie (pas les tarifs, les paramètres, l'import ni l'export) ;</li>
+ *   <li>USER : synthèse, recharges et kilométrage, en lecture et saisie (pas les tarifs, les lieux, les paramètres, l'import ni l'export) ;</li>
  *   <li>INVITE : consultation seule, attribué automatiquement aux appareils du réseau local sans session.</li>
  * </ul>
  * Connexion par formulaire sur /api/auth/login, session en base, protection CSRF par cookie XSRF-TOKEN (lu par Angular).
@@ -68,6 +68,10 @@ public class SecuriteConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/tarifs/**", "/api/parametres/**", "/api/import/**", "/api/export/**").hasRole(ADMIN)
+                        // Lieux de recharge : lecture pour tous (formulaire de recharge), écriture admin
+                        .requestMatchers(HttpMethod.POST, "/api/lieux/**").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.PUT, "/api/lieux/**").hasRole(ADMIN)
+                        .requestMatchers(HttpMethod.DELETE, "/api/lieux/**").hasRole(ADMIN)
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(ADMIN, USER, INVITE)
                         .requestMatchers("/api/**").hasAnyRole(ADMIN, USER)
                         .anyRequest().denyAll())

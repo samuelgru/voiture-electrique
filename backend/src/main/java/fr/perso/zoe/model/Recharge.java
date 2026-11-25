@@ -16,6 +16,11 @@ public class Recharge {
     @Column(nullable = false, length = 20)
     private Lieu lieu = Lieu.MAISON;
 
+    /** Renseigné uniquement quand {@link #lieu} vaut {@link Lieu#AUTRE}. */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "lieu_perso_id")
+    private LieuPerso lieuPerso;
+
     @Column(nullable = false)
     private LocalDateTime debut;
 
@@ -40,6 +45,8 @@ public class Recharge {
     public void setId(Long id) { this.id = id; }
     public Lieu getLieu() { return lieu; }
     public void setLieu(Lieu lieu) { this.lieu = lieu; }
+    public LieuPerso getLieuPerso() { return lieuPerso; }
+    public void setLieuPerso(LieuPerso lieuPerso) { this.lieuPerso = lieuPerso; }
     public LocalDateTime getDebut() { return debut; }
     public void setDebut(LocalDateTime debut) { this.debut = debut; }
     public LocalDateTime getFin() { return fin; }

@@ -23,8 +23,9 @@
     <div class="form-grid">
       <label>Lieu
         <select name="lieu" [(ngModel)]="f.lieu" required>
-          @for (l of lieux; track l.value) {
-            <option [value]="l.value">{{ l.label }}</option>
+          <option value="MAISON">Maison</option>
+          @for (l of lieux(); track l.id) {
+            <option [value]="'AUTRE:' + l.id">{{ l.nom }}</option>
           }
         </select>
       </label>
@@ -79,7 +80,7 @@
       <tbody>
         @for (r of visibles(); track r.id) {
           <tr>
-            <td><span class="badge" [class.relai]="r.lieu === 'PARC_RELAI'">{{ libelleLieu(r.lieu) }}</span></td>
+            <td><span class="badge" [class.relai]="r.lieu !== 'MAISON'">{{ libelleLieu(r) }}</span></td>
             <td>{{ r.debut | date: 'EEE dd/MM/yy HH:mm' }}</td>
             <td>{{ r.fin | date: 'EEE dd/MM/yy HH:mm' }}</td>
             <td class="num">{{ r.pctDebut | percent }}</td>

@@ -3,6 +3,7 @@ package fr.perso.zoe.service;
 import fr.perso.zoe.dto.ImportResultDto;
 import fr.perso.zoe.dto.RechargeDto;
 import fr.perso.zoe.model.*;
+import fr.perso.zoe.repository.LieuPersoRepository;
 import fr.perso.zoe.repository.RechargeRepository;
 import fr.perso.zoe.repository.ReleveKmRepository;
 import fr.perso.zoe.repository.TarifRepository;
@@ -29,7 +30,6 @@ class ExportImportExcelTest {
         t.setDateEffet(date);
         t.setPrixHc(hc);
         t.setPrixHp(hp);
-        t.setPrixParcRelai(0.35);
         t.setPrixEssence(1.9);
         t.setHeureDebutHc(debutHc);
         t.setHeureFinHc(finHc);
@@ -38,7 +38,7 @@ class ExportImportExcelTest {
 
     private static RechargeDto dto(Lieu lieu, LocalDateTime debut, LocalDateTime fin, Double pctDebut, Double pctFin,
                                    double kwh, String commentaire) {
-        return new RechargeDto(null, lieu, debut, fin, pctDebut, pctFin, kwh, commentaire,
+        return new RechargeDto(null, lieu, null, lieu == Lieu.AUTRE ? "Borne du travail" : null, debut, fin, pctDebut, pctFin, kwh, commentaire,
                 pctDebut != null && pctFin != null ? pctFin - pctDebut : null, 11.2, 8, 3.2, 1.5, 1.97, 1.0, 2.97);
     }
 
@@ -58,22 +58,26 @@ class ExportImportExcelTest {
                 tarif(LocalDate.of(2026, 2, 1), 0.1579, 0.2065, LocalTime.of(23, 0), LocalTime.of(6, 20)));
         List<RechargeDto> recharges = List.of(
                 dto(Lieu.MAISON, LocalDateTime.of(2025, 9, 5, 21, 37), LocalDateTime.of(2025, 9, 6, 8, 49), 0.67, 1.0, 16.85, "Première recharge"),
-                dto(Lieu.PARC_RELAI, LocalDateTime.of(2026, 3, 2, 12, 0), LocalDateTime.of(2026, 3, 2, 13, 30), null, null, 8.5, null));
+                dto(Lieu.AUTRE, LocalDateTime.of(2026, 3, 5, 12, 0), LocalDateTime.of(2026, 3, 5, 14, 0), null, null, 10, null));
+        LieuPerso travail = new LieuPerso();
+        travail.setNom("Borne du travail");
+        travail.setPrixKwh(0.42);
         List<ReleveKm> releves = List.of(
                 new ReleveKm(LocalDate.of(2025, 9, 1), 16203),
                 new ReleveKm(LocalDate.of(2025, 10, 1), 17517),
                 new ReleveKm(LocalDate.of(2026, 3, 15), 28396));
 
-        byte[] fichier = ExportExcelService.ecrire(p, recharges, tarifs, releves);
+        byte[] fichier = ExportExcelService.ecrire(p, recharges, tarifs, releves, List.of(travail));
 
         RechargeRepository rechargeRepo = mock(RechargeRepository.class);
         TarifRepository tarifRepo = mock(TarifRepository.class);
         ReleveKmRepository releveRepo = mock(ReleveKmRepository.class);
+        LieuPersoRepository lieuRepo = mock(LieuPersoRepository.class);
         ParametresService parametresService = mock(ParametresService.class);
         Parametres cible = new Parametres();
         org.mockito.Mockito.when(parametresService.get()).thenReturn(cible);
 
-        ImportResultDto resultat = new ImportExcelService(rechargeRepo, tarifRepo, releveRepo, parametresService, "Europe/Paris")
+        ImportResultDto resultat = new ImportExcelService(rechargeRepo, tarifRepo, releveRepo, lieuRepo, parametresService, "Europe/Paris")
                 .importer(new ByteArrayInputStream(fichier));
 
         assertThat(resultat.recharges()).isEqualTo(2);
@@ -99,9 +103,11 @@ class ExportImportExcelTest {
         assertThat(lues.get(0).getPctFin()).isCloseTo(1.0, within(1e-9));
         assertThat(lues.get(0).getKwh()).isCloseTo(16.85, within(1e-9));
         assertThat(lues.get(0).getCommentaire()).isEqualTo("Première recharge");
-        assertThat(lues.get(1).getLieu()).isEqualTo(Lieu.PARC_RELAI);
+        assertThat(lues.get(1).getLieu()).isEqualTo(Lieu.AUTRE);
         assertThat(lues.get(1).getPctDebut()).isNull();
         assertThat(lues.get(1).getCommentaire()).isNull();
+        assertThat(lues.get(1).getLieuPerso().getNom()).isEqualTo("Borne du travail");
+        assertThat(lues.get(1).getLieuPerso().getPrixKwh()).isCloseTo(0.42, within(1e-9));
 
         ArgumentCaptor<Iterable<Tarif>> tc = ArgumentCaptor.forClass(Iterable.class);
         verify(tarifRepo).saveAll(tc.capture());
@@ -110,7 +116,6 @@ class ExportImportExcelTest {
         assertThat(tarifsLus.get(1).getDateEffet()).isEqualTo(LocalDate.of(2026, 2, 1));
         assertThat(tarifsLus.get(1).getPrixHc()).isCloseTo(0.1579, within(1e-9));
         assertThat(tarifsLus.get(1).getPrixHp()).isCloseTo(0.2065, within(1e-9));
-        assertThat(tarifsLus.get(1).getPrixParcRelai()).isCloseTo(0.35, within(1e-9));
         assertThat(tarifsLus.get(1).getPrixEssence()).isCloseTo(1.9, within(1e-9));
         assertThat(tarifsLus.get(0).getHeureDebutHc()).isEqualTo(LocalTime.of(22, 0));
         assertThat(tarifsLus.get(1).getHeureDebutHc()).isEqualTo(LocalTime.of(23, 0));

@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 public record RechargeRequest(
         @NotNull Lieu lieu,
+        /** Obligatoire quand le lieu est AUTRE, ignoré sinon. */
+        Long lieuPersoId,
         @NotNull LocalDateTime debut,
         @NotNull LocalDateTime fin,
         @DecimalMin("0") @DecimalMax("1") Double pctDebut,

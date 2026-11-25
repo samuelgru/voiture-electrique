@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ImportResult, Parametres, Recharge, RechargeRequest, ReleveKm, Synthese, Tarif } from './models';
+import { ImportResult, LieuPerso, Parametres, Recharge, RechargeRequest, ReleveKm, Synthese, Tarif } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -35,6 +35,18 @@ export class ApiService {
   }
   supprimerTarif(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/tarifs/${id}`);
+  }
+
+  lieux(): Observable<LieuPerso[]> {
+    return this.http.get<LieuPerso[]>(`${this.base}/lieux`);
+  }
+  enregistrerLieu(l: LieuPerso): Observable<LieuPerso> {
+    return l.id
+      ? this.http.put<LieuPerso>(`${this.base}/lieux/${l.id}`, l)
+      : this.http.post<LieuPerso>(`${this.base}/lieux`, l);
+  }
+  supprimerLieu(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/lieux/${id}`);
   }
 
   releves(): Observable<ReleveKm[]> {

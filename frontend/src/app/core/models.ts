@@ -1,12 +1,16 @@
-export type Lieu = 'MAISON' | 'PARC_RELAI';
+export type Lieu = 'MAISON' | 'AUTRE';
 
-export const LIEUX: { value: Lieu; label: string }[] = [
-  { value: 'MAISON', label: 'Maison' },
-  { value: 'PARC_RELAI', label: 'Parc relais' },
-];
+/** Lieu de recharge créé par l'utilisateur, avec son prix du kWh. */
+export interface LieuPerso {
+  id?: number;
+  nom: string;
+  prixKwh: number;
+}
 
 export interface RechargeRequest {
   lieu: Lieu;
+  /** Obligatoire quand le lieu est AUTRE. */
+  lieuPersoId: number | null;
   debut: string;
   fin: string;
   pctDebut: number | null;
@@ -17,6 +21,7 @@ export interface RechargeRequest {
 
 export interface Recharge extends RechargeRequest {
   id: number;
+  lieuNom: string | null;
   pctCharge: number | null;
   nbHeures: number;
   heuresHc: number;
@@ -32,7 +37,6 @@ export interface Tarif {
   dateEffet: string;
   prixHc: number;
   prixHp: number;
-  prixParcRelai: number;
   prixEssence: number;
   heureDebutHc: string;
   heureFinHc: string;

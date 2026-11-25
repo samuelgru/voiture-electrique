@@ -2,8 +2,11 @@ package fr.perso.zoe.service;
 
 import fr.perso.zoe.dto.RechargeDto;
 import fr.perso.zoe.dto.RechargeRequest;
+import fr.perso.zoe.model.Lieu;
+import fr.perso.zoe.model.LieuPerso;
 import fr.perso.zoe.model.Recharge;
 import fr.perso.zoe.model.Tarif;
+import fr.perso.zoe.repository.LieuPersoRepository;
 import fr.perso.zoe.repository.RechargeRepository;
 import fr.perso.zoe.repository.TarifRepository;
 import org.springframework.http.HttpStatus;
@@ -18,10 +21,13 @@ public class RechargeService {
 
     private final RechargeRepository repository;
     private final TarifRepository tarifRepository;
+    private final LieuPersoRepository lieuRepository;
     private final CalculRechargeService calcul;
 
-    public RechargeService(RechargeRepository repository, TarifRepository tarifRepository, CalculRechargeService calcul) {
+    public RechargeService(RechargeRepository repository, TarifRepository tarifRepository,
+                           LieuPersoRepository lieuRepository, CalculRechargeService calcul) {
         this.repository = repository;
+        this.lieuRepository = lieuRepository;
         this.tarifRepository = tarifRepository;
         this.calcul = calcul;
     }
@@ -52,11 +58,21 @@ public class RechargeService {
         repository.deleteById(id);
     }
 
-    private static void appliquer(Recharge r, RechargeRequest req) {
+    private void appliquer(Recharge r, RechargeRequest req) {
         if (req.fin().isBefore(req.debut())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La fin doit être après le début");
         }
         r.setLieu(req.lieu());
+        if (req.lieu() == Lieu.AUTRE) {
+            if (req.lieuPersoId() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisis un lieu");
+            }
+            LieuPerso lieu = lieuRepository.findById(req.lieuPersoId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lieu introuvable"));
+            r.setLieuPerso(lieu);
+        } else {
+            r.setLieuPerso(null);
+        }
         r.setDebut(req.debut().withNano(0));
         r.setFin(req.fin().withNano(0));
         r.setPctDebut(req.pctDebut());

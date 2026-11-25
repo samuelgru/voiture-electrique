@@ -57,10 +57,12 @@ public class CalculRechargeService {
             if (r.getLieu() == Lieu.MAISON) {
                 prixHc = t.getPrixHc();
                 prixHp = t.getPrixHp();
-            } else {
-                prixHc = t.getPrixParcRelai();
-                prixHp = t.getPrixParcRelai();
             }
+        }
+        if (r.getLieu() == Lieu.AUTRE && r.getLieuPerso() != null) {
+            // Prix du kWh unique, indépendant des tarifs datés : pas de distinction HC / HP
+            prixHc = r.getLieuPerso().getPrixKwh();
+            prixHp = prixHc;
         }
         double coutHc;
         double coutHp;
@@ -76,7 +78,8 @@ public class CalculRechargeService {
         Double pctCharge = (r.getPctDebut() != null && r.getPctFin() != null) ? r.getPctFin() - r.getPctDebut() : null;
 
         return new RechargeDto(
-                r.getId(), r.getLieu(), r.getDebut(), r.getFin(), r.getPctDebut(), r.getPctFin(), r.getKwh(),
+                r.getId(), r.getLieu(), r.getLieuPerso() != null ? r.getLieuPerso().getId() : null,
+                r.getLieuPerso() != null ? r.getLieuPerso().getNom() : null, r.getDebut(), r.getFin(), r.getPctDebut(), r.getPctFin(), r.getKwh(),
                 r.getCommentaire(), pctCharge, nbHeures, heuresHc, heuresHp, puissance, coutHc, coutHp, coutHc + coutHp);
     }
 

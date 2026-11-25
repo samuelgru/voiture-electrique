@@ -34,12 +34,15 @@ public class ImportExcelService {
     private final RechargeRepository rechargeRepository;
     private final TarifRepository tarifRepository;
     private final ReleveKmRepository releveRepository;
+    private final LieuPersoRepository lieuRepository;
     private final ParametresService parametresService;
     private final ZoneId zone;
 
     public ImportExcelService(RechargeRepository rechargeRepository, TarifRepository tarifRepository,
-                              ReleveKmRepository releveRepository, ParametresService parametresService,
+                              ReleveKmRepository releveRepository, LieuPersoRepository lieuRepository,
+                              ParametresService parametresService,
                               @Value("${zoe.timezone:Europe/Paris}") String zone) {
+        this.lieuRepository = lieuRepository;
         this.rechargeRepository = rechargeRepository;
         this.tarifRepository = tarifRepository;
         this.releveRepository = releveRepository;
@@ -63,6 +66,20 @@ public class ImportExcelService {
                 throw new IllegalArgumentException("Onglets \"Zoe\" et \"Prix Electricité\" introuvables");
             }
 
+            // ---------- Lieux supplémentaires (onglet facultatif)
+            Map<String, LieuPerso> lieux = new LinkedHashMap<>();
+            Sheet feuilleLieux = feuille(wb, "lieux");
+            if (feuilleLieux != null) {
+                for (int i = 1; i <= feuilleLieux.getLastRowNum(); i++) {
+                    Row row = feuilleLieux.getRow(i);
+                    if (row == null) continue;
+                    String nom = texte(row.getCell(0));
+                    Double prixKwh = nombre(row.getCell(1));
+                    if (nom == null || nom.isBlank()) continue;
+                    lieux.putIfAbsent(normaliser(nom), nouveauLieu(nom, prixKwh == null ? 0 : prixKwh));
+                }
+            }
+
             // ---------- Recharges
             List<Recharge> recharges = new ArrayList<>();
             List<PlageHc> plages = new ArrayList<>();
@@ -80,7 +97,23 @@ public class ImportExcelService {
                     continue;
                 }
                 Recharge r = new Recharge();
-                r.setLieu(normaliser(lieu).equals("maison") ? Lieu.MAISON : Lieu.PARC_RELAI);
+                String cle = normaliser(lieu);
+                if (cle.equals("maison")) {
+                    r.setLieu(Lieu.MAISON);
+                } else {
+                    boolean parcRelai = cle.equals("parc relai");
+                    String cleLieu = parcRelai ? "parc relais" : cle;
+                    r.setLieu(Lieu.AUTRE);
+                    r.setLieuPerso(lieux.computeIfAbsent(cleLieu, k -> {
+                        // Classeur historique : le parc relais avait son prix dans l'onglet « Prix Electricité » (colonne D)
+                        double prixKwh = parcRelai ? ancienPrixParcRelai(prix) : 0;
+                        // Un parc relais à 0 € est légitime (recharge gratuite) : pas d'avertissement
+                        if (!parcRelai) {
+                            avertissements.add("Lieu « " + lieu.trim() + " » créé à 0 €/kWh (absent de l'onglet « Lieux »)");
+                        }
+                        return nouveauLieu(parcRelai ? "Parc relais" : lieu, prixKwh);
+                    }));
+                }
                 r.setDebut(debut);
                 r.setFin(fin);
                 r.setPctDebut(nombre(row.getCell(3)));
@@ -111,7 +144,6 @@ public class ImportExcelService {
                 t.setDateEffet(date.toLocalDate());
                 t.setPrixHc(hc);
                 t.setPrixHp(hp);
-                t.setPrixParcRelai(Optional.ofNullable(nombre(row.getCell(3))).orElse(0.0));
                 t.setPrixEssence(Optional.ofNullable(nombre(row.getCell(4))).orElse(0.0));
                 tarifs.put(t.getDateEffet(), t);
                 LocalTime hcDebut = heure(row.getCell(5));
@@ -177,8 +209,10 @@ public class ImportExcelService {
 
             // ---------- Remplacement des données
             rechargeRepository.deleteAllInBatch();
+            lieuRepository.deleteAllInBatch();
             tarifRepository.deleteAllInBatch();
             releveRepository.deleteAllInBatch();
+            lieuRepository.saveAll(lieux.values());
             rechargeRepository.saveAll(recharges);
             tarifRepository.saveAll(tarifs.values());
             releveRepository.saveAll(releves);
@@ -211,7 +245,6 @@ public class ImportExcelService {
                 copie.setDateEffet(d);
                 copie.setPrixHc(base.getValue().getPrixHc());
                 copie.setPrixHp(base.getValue().getPrixHp());
-                copie.setPrixParcRelai(base.getValue().getPrixParcRelai());
                 copie.setPrixEssence(base.getValue().getPrixEssence());
                 tarifs.put(d, copie);
             }
@@ -227,6 +260,25 @@ public class ImportExcelService {
     }
 
     // ---------------------------------------------------------------- utilitaires
+
+    /** Dernier prix non nul de la colonne D (« Parc relai ») de l'onglet « Prix Electricité », 0 si absent. */
+    private static double ancienPrixParcRelai(Sheet prix) {
+        double dernier = 0;
+        for (int i = 2; i <= prix.getLastRowNum(); i++) {
+            Row row = prix.getRow(i);
+            if (row == null) continue;
+            Double v = nombre(row.getCell(3));
+            if (v != null && v > 0) dernier = v;
+        }
+        return dernier;
+    }
+
+    private static LieuPerso nouveauLieu(String nom, double prixKwh) {
+        LieuPerso l = new LieuPerso();
+        l.setNom(nom.trim());
+        l.setPrixKwh(prixKwh);
+        return l;
+    }
 
     private static Sheet feuille(Workbook wb, String nomNormalise) {
         for (Sheet s : wb) {

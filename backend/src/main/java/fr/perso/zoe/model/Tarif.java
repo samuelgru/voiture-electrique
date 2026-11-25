@@ -22,9 +22,6 @@ public class Tarif {
     @Column(name = "prix_hp", nullable = false)
     private double prixHp;
 
-    @Column(name = "prix_parc_relai", nullable = false)
-    private double prixParcRelai;
-
     @Column(name = "prix_essence", nullable = false)
     private double prixEssence;
 
@@ -42,8 +39,6 @@ public class Tarif {
     public void setPrixHc(double prixHc) { this.prixHc = prixHc; }
     public double getPrixHp() { return prixHp; }
     public void setPrixHp(double prixHp) { this.prixHp = prixHp; }
-    public double getPrixParcRelai() { return prixParcRelai; }
-    public void setPrixParcRelai(double prixParcRelai) { this.prixParcRelai = prixParcRelai; }
     public double getPrixEssence() { return prixEssence; }
     public void setPrixEssence(double prixEssence) { this.prixEssence = prixEssence; }
     public LocalTime getHeureDebutHc() { return heureDebutHc; }

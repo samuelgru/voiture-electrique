@@ -1,10 +1,11 @@
 package fr.perso.zoe.service;
 
 import fr.perso.zoe.dto.RechargeDto;
-import fr.perso.zoe.model.Lieu;
+import fr.perso.zoe.model.LieuPerso;
 import fr.perso.zoe.model.Parametres;
 import fr.perso.zoe.model.ReleveKm;
 import fr.perso.zoe.model.Tarif;
+import fr.perso.zoe.repository.LieuPersoRepository;
 import fr.perso.zoe.repository.ReleveKmRepository;
 import fr.perso.zoe.repository.TarifRepository;
 import org.apache.poi.ss.usermodel.*;
@@ -31,9 +32,12 @@ public class ExportExcelService {
     private final RechargeService rechargeService;
     private final TarifRepository tarifRepository;
     private final ReleveKmRepository releveRepository;
+    private final LieuPersoRepository lieuRepository;
 
     public ExportExcelService(ParametresService parametresService, RechargeService rechargeService,
-                              TarifRepository tarifRepository, ReleveKmRepository releveRepository) {
+                              TarifRepository tarifRepository, ReleveKmRepository releveRepository,
+                              LieuPersoRepository lieuRepository) {
+        this.lieuRepository = lieuRepository;
         this.parametresService = parametresService;
         this.rechargeService = rechargeService;
         this.tarifRepository = tarifRepository;
@@ -45,16 +49,19 @@ public class ExportExcelService {
         return ecrire(parametresService.get(),
                 rechargeService.lister(),
                 tarifRepository.findAllByOrderByDateEffetAsc(),
-                releveRepository.findAllByOrderByDateReleveAsc());
+                releveRepository.findAllByOrderByDateReleveAsc(),
+                lieuRepository.findAllByOrderByNomAsc());
     }
 
-    static byte[] ecrire(Parametres p, List<RechargeDto> recharges, List<Tarif> tarifs, List<ReleveKm> releves)
+    static byte[] ecrire(Parametres p, List<RechargeDto> recharges, List<Tarif> tarifs, List<ReleveKm> releves,
+                         List<LieuPerso> lieux)
             throws IOException {
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Styles st = new Styles(wb);
             synthese(wb, st, p, releves);
             zoe(wb, st, recharges);
             prix(wb, st, tarifs);
+            lieux(wb, st, lieux);
             lisezMoi(wb, st);
             wb.write(out);
             return out.toByteArray();
@@ -118,7 +125,7 @@ public class ExportExcelService {
         int ligne = 1;
         for (RechargeDto r : recharges.stream().sorted(Comparator.comparing(RechargeDto::debut)).toList()) {
             Row row = s.createRow(ligne++);
-            row.createCell(0).setCellValue(r.lieu() == Lieu.MAISON ? "maison" : "Parc relai");
+            row.createCell(0).setCellValue(libelleLieu(r));
             Cell debut = row.createCell(1);
             debut.setCellValue(r.debut());
             debut.setCellStyle(st.dateHeure);
@@ -146,14 +153,41 @@ public class ExportExcelService {
         s.setColumnWidth(ImportExcelService.COL_COMMENTAIRE, 40 * 256);
     }
 
+    private static String libelleLieu(RechargeDto r) {
+        return switch (r.lieu()) {
+            case MAISON -> "maison";
+            case AUTRE -> r.lieuNom();
+        };
+    }
+
+    private static void lieux(Workbook wb, Styles st, List<LieuPerso> lieux) {
+        Sheet s = wb.createSheet("Lieux");
+        String[] titres = {"Lieu", "Prix kWh"};
+        Row entete = s.createRow(0);
+        for (int i = 0; i < titres.length; i++) {
+            Cell c = entete.createCell(i);
+            c.setCellValue(titres[i]);
+            c.setCellStyle(st.entete);
+        }
+        int ligne = 1;
+        for (LieuPerso l : lieux) {
+            Row row = s.createRow(ligne++);
+            row.createCell(0).setCellValue(l.getNom());
+            row.createCell(1).setCellValue(l.getPrixKwh());
+        }
+        s.setColumnWidth(0, 28 * 256);
+        s.setColumnWidth(1, 12 * 256);
+    }
+
     private static void prix(Workbook wb, Styles st, List<Tarif> tarifs) {
         Sheet s = wb.createSheet("Prix Electricité");
         texte(s, "A1", "Prix Electricité", st.entete);
         texte(s, "E1", "Essence", st.entete);
         texte(s, "F1", "Heures creuses", st.entete);
-        String[] titres = {"Date", "HC", "HP", "Parc relai", "le litre", "début HC", "fin HC"};
+        String[] titres = {"Date", "HC", "HP", "", "le litre", "début HC", "fin HC"};
         Row entete = s.createRow(1);
         for (int i = 0; i < titres.length; i++) {
+            if (titres[i].isEmpty()) continue;
             Cell c = entete.createCell(i);
             c.setCellValue(titres[i]);
             c.setCellStyle(st.entete);
@@ -166,7 +200,6 @@ public class ExportExcelService {
             d.setCellStyle(st.date);
             row.createCell(1).setCellValue(t.getPrixHc());
             row.createCell(2).setCellValue(t.getPrixHp());
-            row.createCell(3).setCellValue(t.getPrixParcRelai());
             row.createCell(4).setCellValue(t.getPrixEssence());
             heure(row, 5, t.getHeureDebutHc(), st);
             heure(row, 6, t.getHeureFinHc(), st);
@@ -184,11 +217,13 @@ public class ExportExcelService {
                 "L'import remplace TOUTES les recharges, tarifs et relevés kilométriques. Les onglets sont reconnus par leur nom.",
                 "",
                 "Onglet « Zoe » : une ligne par recharge, titres en ligne 1, données dès la ligne 2.",
-                "  A Lieu : « maison » ou « Parc relai »   B début / C fin : date et heure   D % début / E % fin : entre 0 et 1 (ex. 0,67)",
+                "  A Lieu : « maison » ou le nom d'un lieu de l'onglet « Lieux »   B début / C fin : date et heure   D % début / E % fin : entre 0 et 1 (ex. 0,67)",
                 "  G nb Watt/h : énergie en kWh   P Commentaire : facultatif.   Colonnes grisées (F, H, K à O) : calculées, ignorées à l'import.",
                 "",
                 "Onglet « Prix Electricité » : titres en ligne 2, données dès la ligne 3, un tarif par date d'effet.",
-                "  A Date   B HC (€/kWh)   C HP (€/kWh)   D Parc relai (€/kWh)   E Essence (€/litre)   F début HC / G fin HC : facultatifs (défaut 22:00 → 06:00).",
+                "  A Date   B HC (€/kWh)   C HP (€/kWh)   D (inutilisée ; l'ancien prix « Parc relai » n'est lu que pour créer ce lieu)   E Essence (€/litre)   F début HC / G fin HC : facultatifs (défaut 22:00 → 06:00).",
+                "",
+                "Onglet « Lieux » (facultatif) : titres en ligne 1, un lieu de recharge par ligne : A nom   B prix du kWh (€). Un lieu cité dans « Zoe » mais absent ici est créé à 0 €.",
                 "",
                 "Onglet « Synthèse » : paramètres aux cellules fixes, relevés kilométriques dès la ligne 12.",
                 "  B1 durée du contrat (ans)   A2 km du contrat   F2 compteur au début   F3 compteur actuel   F4 début du contrat (facultatif)",

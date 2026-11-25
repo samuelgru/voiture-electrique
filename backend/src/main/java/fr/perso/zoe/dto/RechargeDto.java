@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 public record RechargeDto(
         Long id,
         Lieu lieu,
+        Long lieuPersoId,
+        String lieuNom,
         LocalDateTime debut,
         LocalDateTime fin,
         Double pctDebut,
