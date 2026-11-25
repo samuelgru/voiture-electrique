@@ -75,10 +75,33 @@ sans saisie, modification ni suppression, et sans Tarifs ni Paramètres. Aucune 
 - **Hors du réseau local** (par ex. depuis Internet), rien ne change : identifiant et mot de passe obligatoires.
 - Un appareil n'est considéré comme local que si **toutes** les adresses de la chaîne de connexion le sont : un visiteur venu
   d'Internet via le reverse proxy du NAS n'est jamais connecté automatiquement, même en falsifiant `X-Forwarded-For`.
-- **Vérification** : en mode consultation, survoler « Consultation · réseau local » affiche l'adresse vue par le serveur.
-  Elle doit être celle de l'appareil (ex. `192.168.1.42`, ou `192.168.1.42,192.168.1.10` derrière le reverse proxy du NAS).
-  Si elle indique une adresse Docker (`172.x.x.x`), la détection ne fonctionne pas pour cet accès : ne pas élargir
-  `LOCAL_NETWORK` à `172.16.0.0/12` sans comprendre pourquoi, cela rendrait « local » tout accès passant par cette adresse.
+- **Passerelle Docker** : sur le Synology, nginx voit tout accès au port publié (même direct depuis le PC) comme venant de la
+  passerelle du réseau Docker, pas de l'appareil. Le compose fixe ce réseau (`172.30.0.0/24`, passerelle `172.30.0.1`) et il faut
+  autoriser cette passerelle :
+  ```
+  LOCAL_NETWORK=192.168.1.0/24,172.30.0.1/32
+  ```
+  Un accès direct au port 8090 est alors local. Un visiteur d'Internet qui passe par le reverse proxy du NAS ne l'est pas : le proxy
+  ajoute son adresse publique à la chaîne (`IP_PUBLIQUE,172.30.0.1`).
+  **À vérifier avant de l'activer** : (1) la box ne redirige pas le port 8090 vers le NAS (sinon ces accès seraient pris pour locaux) ;
+  (2) depuis un téléphone en 4G/5G, `sudo docker logs --tail 3 zoe-frontend` montre l'adresse publique du téléphone en fin de ligne
+  (pas `"-"`), preuve que le reverse proxy transmet l'adresse du client.
+  Après modification du réseau : `sudo docker compose down && sudo docker compose up -d`.
+- **Accès par le nom de domaine depuis chez soi** : la box renvoie l'adresse publique, et l'appareil local est vu avec cette adresse
+  publique (hairpin NAT) : il n'est donc pas reconnu. Deux solutions :
+  - utiliser `http://IP-du-NAS:8090`, ou un DNS local qui renvoie l'IP du NAS pour ce nom (le plus strict) ;
+  - ajouter le nom de domaine à `LOCAL_NETWORK` : ses adresses sont résolues toutes les 5 minutes (la dernière connue est
+    conservée si le DNS est en panne), donc cela suit le changement d'adresse publique de la box :
+    ```
+    LOCAL_NETWORK=192.168.1.0/24,172.30.0.1/32,zoe.andre-gru.synology.me
+    ```
+    **Compromis** : tout appareil derrière la box (y compris un invité sur le Wi-Fi) apparaît alors avec l'adresse publique et est
+    connecté en consultation, ce qui est déjà le cas sur le réseau local. Un visiteur d'Internet n'a jamais l'adresse publique de la box
+    (sauf pendant quelques minutes si la box change d'adresse et qu'un autre abonné reprend l'ancienne avant la mise à jour du DNS).
+    Si le DNS dynamique n'est plus mis à jour, l'ancienne adresse reste acceptée : surveiller que `synology.me` suit bien l'adresse.
+- **Vérification** : en mode consultation, survoler « Consultation · réseau local » affiche l'adresse vue par le serveur
+  (ex. `,192.168.1.42` ou `,172.30.0.1` en accès direct). En cas de doute, `sudo docker logs --tail 5 zoe-frontend` donne
+  l'adresse de connexion (début de ligne) et celle transmise par le proxy (fin de ligne).
 - Tous les appareils du réseau (y compris un Wi-Fi invité qui partagerait ce réseau) peuvent consulter les données.
 
 ---

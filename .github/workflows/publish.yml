@@ -10,8 +10,15 @@ permissions:
   packages: write
 
 jobs:
+  # Tests et build : la publication attend leur succès
+  ci:
+    uses: ./.github/workflows/ci.yml
+    with:
+      images: non
+
   publish:
     name: Publier zoe-${{ matrix.service }}
+    needs: ci
     runs-on: ubuntu-latest
     strategy:
       matrix:

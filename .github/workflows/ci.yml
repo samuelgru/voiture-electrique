@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Appelé par publish.yml : les images ne sont publiées que si ces vérifications passent
+  workflow_call:
+    inputs:
+      images:
+        description: "« non » pour ne pas reconstruire les images (publish.yml les construit lui-même)"
+        type: string
+        default: "oui"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -50,6 +57,7 @@ jobs:
     name: Images Docker
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    if: inputs.images != 'non'
     strategy:
       matrix:
         service: [backend, frontend]
